@@ -1,0 +1,35 @@
+---
+- hosts: localhost
+  connection: local
+  tasks:
+      - name: Clean tomcat_hosts
+        ansible.builtin.known_hosts:
+            state: absent
+            name: "{{ hostvars[item].ansible_host if hostvars[item].ansible_host is defined else item }}"
+        with_items: "{{ groups['tomcat_hosts'] }}"
+        ignore_errors: true
+
+
+- hosts: tomcat_hosts
+  gather_facts: true
+  become: yes
+  vars:
+    tomcat_instances:
+      - name: "tomcat-version-8"
+        version: 8
+        shutdown_port: 8008
+        non_ssl_connector_port: 8083
+        ssl_connector_port: 8446
+        ajp_port: 8012
+  roles:
+    - role: robertdebock.tomcat
+
+- hosts: localhost
+  connection: local
+  vars:
+    - root_dir: ''
+  tasks:
+      - name: Build war file
+        shell:
+          cmd: mvn package
+          chdir: "{{ root_dir }}"
